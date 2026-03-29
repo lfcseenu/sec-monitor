@@ -12,7 +12,31 @@ GMAIL_USER = "lfcseenu@gmail.com"
 GMAIL_PASS = os.environ.get('GMAIL_PASSWORD') 
 HEADERS = {'User-Agent': 'Pacifica Research Agent lfcseenu@gmail.com'}
 
-def monitor():
+def def monitor():
+    # memory: check what we've already seen in the past
+    last_seen = json.load(open('last_seen.json')) if os.path.exists('last_seen.json') else {}
+    new_updates = False
+
+    for ticker, cik in TICKERS.items():
+        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=10)
+            if r.status_code == 200:
+                recent = r.json()['filings']['recent']
+                form, date, acc = recent['form'][0], recent['filingDate'][0], recent['accessionNumber'][0]
+                
+                # If this filing is NEW and NOT a noisy 'Form 4'
+                if last_seen.get(ticker) != acc:
+                    if form != "4" and any(x in form for x in ["8-K", "10-Q", "10-K", "13D", "13G", "13F"]):
+                        send_mail(ticker, form, date, cik, acc)
+                    last_seen[ticker] = acc
+                    new_updates = True
+        except Exception:
+            pass
+
+    # ALWAYS save the file so the "Save Memory" step doesn't fail
+    with open('last_seen.json', 'w') as f:
+        json.dump(last_seen, f)
     # memory: check what we've already seen in the past
     last_seen = json.load(open('last_seen.json')) if os.path.exists('last_seen.json') else {}
     new_updates = False
