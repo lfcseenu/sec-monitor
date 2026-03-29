@@ -8,14 +8,18 @@ TICKERS = {
 }
 EMAIL_TO = "lfcseenu@gmail.com"
 GMAIL_USER = "lfcseenu@gmail.com"
-# This pulls your 'Secret' password from the vault automatically
 GMAIL_PASS = os.environ.get('GMAIL_PASSWORD') 
 HEADERS = {'User-Agent': 'Pacifica Research Agent lfcseenu@gmail.com'}
 
-def def monitor():
-    # memory: check what we've already seen in the past
-    last_seen = json.load(open('last_seen.json')) if os.path.exists('last_seen.json') else {}
-    new_updates = False
+def monitor():
+    # 1. Load memory: check what we've seen in the past
+    if os.path.exists('last_seen.json'):
+        with open('last_seen.json', 'r') as f:
+            last_seen = json.load(f)
+    else:
+        last_seen = {}
+
+    print("Checking SEC for updates...")
 
     for ticker, cik in TICKERS.items():
         url = f"https://data.sec.gov/submissions/CIK{cik}.json"
@@ -27,41 +31,22 @@ def def monitor():
                 
                 # If this filing is NEW and NOT a noisy 'Form 4'
                 if last_seen.get(ticker) != acc:
+                    # Filter for substantive filings only
                     if form != "4" and any(x in form for x in ["8-K", "10-Q", "10-K", "13D", "13G", "13F"]):
+                        print(f"!!! New filing found for {ticker}: {form}")
                         send_mail(ticker, form, date, cik, acc)
+                    
+                    # Update our memory variable
                     last_seen[ticker] = acc
-                    new_updates = True
-        except Exception:
-            pass
+            else:
+                print(f"SEC limit or error for {ticker}: {r.status_code}")
+        except Exception as e:
+            print(f"Skipping {ticker} due to connection error: {e}")
 
-    # ALWAYS save the file so the "Save Memory" step doesn't fail
+    # 2. ALWAYS save the file at the end so the GitHub Action "Save Memory" step succeeds
     with open('last_seen.json', 'w') as f:
         json.dump(last_seen, f)
-    # memory: check what we've already seen in the past
-    last_seen = json.load(open('last_seen.json')) if os.path.exists('last_seen.json') else {}
-    new_updates = False
-
-    for ticker, cik in TICKERS.items():
-        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=10)
-            if r.status_code == 200:
-                recent = r.json()['filings']['recent']
-                form, date, acc = recent['form'][0], recent['filingDate'][0], recent['accessionNumber'][0]
-                
-                # If this filing is NEW and NOT a noisy 'Form 4'
-                if last_seen.get(ticker) != acc:
-                    if form != "4" and any(x in form for x in ["8-K", "10-Q", "10-K", "13D", "13G", "13F"]):
-                        send_mail(ticker, form, date, cik, acc)
-                    last_seen[ticker] = acc
-                    new_updates = True
-        except Exception as e:
-            print(f"Skipping {ticker} due to a connection hiccup.")
-
-    # Update the memory file so we don't email you twice for the same thing
-    if new_updates:
-        with open('last_seen.json', 'w') as f:
-            json.dump(last_seen, f)
+    print("Monitor cycle complete.")
 
 def send_mail(ticker, form, date, cik, acc):
     # Professional SEC Viewer link for easy reading on your phone
@@ -72,9 +57,13 @@ def send_mail(ticker, form, date, cik, acc):
     msg['Subject'] = f"🚨 SEC: {ticker} - {form}"
     msg['From'], msg['To'] = GMAIL_USER, EMAIL_TO
     
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
-        s.login(GMAIL_USER, GMAIL_PASS)
-        s.send_message(msg)
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+            s.login(GMAIL_USER, GMAIL_PASS)
+            s.send_message(msg)
+        print(f"Email sent for {ticker}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 if __name__ == "__main__":
     monitor()
