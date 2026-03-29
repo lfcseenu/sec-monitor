@@ -43,8 +43,7 @@ def daily_monitor():
 def weekly_summary():
     seven_days_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
     rows = ""
-    print(f"--- STARTING SCAN ---")
-    print(f"Looking for filings since {seven_days_ago}...")
+    print(f"Scanning filings since {seven_days_ago}...")
     
     for ticker, cik in TICKERS.items():
         try:
@@ -57,12 +56,12 @@ def weekly_summary():
                         rows += f"<tr><td>{ticker}</td><td>{f['form'][i]}</td><td>{f['filingDate'][i]}</td><td><a href='{link}'>View</a></td></tr>"
         except Exception: continue
     
+    # 💓 HEARTBEAT: If no news, create a "No News" row so the email still sends
     if not rows:
-        print("No filings found this week. Sending heartbeat email...")
+        print("No news found. Sending Heartbeat email.")
         rows = "<tr><td colspan='4' style='text-align:center; padding: 20px;'>No major filings detected in the last 7 days.</td></tr>"
         
     html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table></body></html>"
-    
     send_mail(f"📊 Weekly Recap: {datetime.now().strftime('%b %d')}", html, is_html=True)
     print("SUCCESS: Weekly summary email sent.")
 
