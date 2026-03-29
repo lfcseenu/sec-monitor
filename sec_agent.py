@@ -4,19 +4,17 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # ==========================================
-# 🎯 THE MASTER WATCHLIST (Update Here Only)
+# 🎯 THE MASTER WATCHLIST
 # ==========================================
 TICKERS = {
     "MSLE": "0001840425", "FDMT": "0001406796", "CORT": "0001088825",
-    "SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527",
-    "DTIL": "0001357671", "ADVM": "0001381434"
+    "SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527"
 }
 
 EMAIL_TO = "lfcseenu@gmail.com"
 GMAIL_USER = "lfcseenu@gmail.com"
 GMAIL_PASS = os.environ.get('GMAIL_PASSWORD')
-HEADERS = {'User-Agent': 'Pacifica Investment Agent lfcseenu@gmail.com'}
-CVR_NOTE = "Note: Adverum CVR milestones: $1.78 / $7.13 | FDMT Durability Watch"
+HEADERS = {'User-Agent': 'Pacifica Research Agent lfcseenu@gmail.com'}
 
 def send_mail(subject, body, is_html=False):
     if is_html:
@@ -40,7 +38,7 @@ def daily_monitor():
                 if last_seen.get(ticker) != acc:
                     if form != "4" and any(x in form for x in ["8-K", "10-Q", "10-K", "13D", "13G", "13F"]):
                         link = f"https://www.sec.gov/cgi-bin/viewer.cgi?action=view&cik={cik}&accession_number={acc}"
-                        send_mail(f"🚨 SEC: {ticker} - {form}", f"New filing for {ticker}\nForm: {form}\nDate: {date}\n\nLink: {link}\n\n{CVR_NOTE}")
+                        send_mail(f"🚨 SEC: {ticker} - {form}", f"New filing for {ticker}\nForm: {form}\nDate: {date}\n\nLink: {link}")
                     last_seen[ticker] = acc
         except Exception: pass
     with open('last_seen.json', 'w') as f: json.dump(last_seen, f)
@@ -59,7 +57,7 @@ def weekly_summary():
                         rows += f"<tr><td>{ticker}</td><td>{f['form'][i]}</td><td>{f['filingDate'][i]}</td><td><a href='{link}'>View</a></td></tr>"
         except Exception: continue
     if rows:
-        html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table><p>{CVR_NOTE}</p></body></html>"
+        html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table></body></html>"
         send_mail(f"📊 Weekly Recap: {datetime.now().strftime('%b %d')}", html, is_html=True)
 
 if __name__ == "__main__":
