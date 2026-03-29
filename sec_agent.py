@@ -7,9 +7,9 @@ from email.mime.multipart import MIMEMultipart
 # 🎯 THE MASTER WATCHLIST (Update Here Only)
 # ==========================================
 TICKERS = {
-    "MSLE": "0001421642", "DTIL": "0001357874", "FDMT": "0001650648", 
-    "CORT": "0001088856", "SGMO": "0001001233", "NTLA": "0001652130", 
-    "QURE": "0001590560", "ADVM": "0001381434"
+    "MSLE": "0001840425", "FDMT": "0001406796", "CORT": "0001088825",
+    "SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527",
+    "DTIL": "0001357671", "ADVM": "0001381434"
 }
 
 EMAIL_TO = "lfcseenu@gmail.com"
@@ -19,8 +19,11 @@ HEADERS = {'User-Agent': 'Pacifica Investment Agent lfcseenu@gmail.com'}
 CVR_NOTE = "Note: Adverum CVR milestones: $1.78 / $7.13 | FDMT Durability Watch"
 
 def send_mail(subject, body, is_html=False):
-    msg = MIMEMultipart('alternative') if is_html else MIMEText(body)
-    if is_html: msg.attach(MIMEText(body, 'html'))
+    if is_html:
+        msg = MIMEMultipart('alternative')
+        msg.attach(MIMEText(body, 'html'))
+    else:
+        msg = MIMEText(body)
     msg['Subject'], msg['From'], msg['To'] = subject, GMAIL_USER, EMAIL_TO
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
         s.login(GMAIL_USER, GMAIL_PASS)
@@ -50,13 +53,13 @@ def weekly_summary():
             r = requests.get(f"https://data.sec.gov/submissions/CIK{cik}.json", headers=HEADERS, timeout=10)
             if r.status_code == 200:
                 f = r.json()['filings']['recent']
-                for i in range(min(5, len(f['filingDate']))):
+                for i in range(min(10, len(f['filingDate']))):
                     if f['filingDate'][i] >= seven_days_ago:
                         link = f"https://www.sec.gov/cgi-bin/viewer.cgi?action=view&cik={cik}&accession_number={f['accessionNumber'][i]}"
                         rows += f"<tr><td>{ticker}</td><td>{f['form'][i]}</td><td>{f['filingDate'][i]}</td><td><a href='{link}'>View</a></td></tr>"
         except Exception: continue
     if rows:
-        html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='5' style='border-collapse: collapse;'><tr><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr>{rows}</table><p>{CVR_NOTE}</p></body></html>"
+        html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table><p>{CVR_NOTE}</p></body></html>"
         send_mail(f"📊 Weekly Recap: {datetime.now().strftime('%b %d')}", html, is_html=True)
 
 if __name__ == "__main__":
