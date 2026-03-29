@@ -25,6 +25,7 @@ def send_mail(subject, body, is_html=False):
         s.send_message(msg)
 
 def daily_monitor():
+    print("--- STARTING DAILY MONITOR ---")
     last_seen = json.load(open('last_seen.json')) if os.path.exists('last_seen.json') else {}
     for ticker, cik in TICKERS.items():
         try:
@@ -36,14 +37,17 @@ def daily_monitor():
                     if form != "4" and any(x in form for x in ["8-K", "10-Q", "10-K", "13D", "13G", "13F"]):
                         link = f"https://www.sec.gov/cgi-bin/viewer.cgi?action=view&cik={cik}&accession_number={acc}"
                         send_mail(f"🚨 SEC: {ticker} - {form}", f"New filing for {ticker}\nForm: {form}\nDate: {date}\n\nLink: {link}")
+                        print(f"Alert sent for {ticker}")
                     last_seen[ticker] = acc
-        except Exception: pass
+        except Exception as e: print(f"Error checking {ticker}: {e}")
     with open('last_seen.json', 'w') as f: json.dump(last_seen, f)
+    print("Daily monitor check complete.")
 
 def weekly_summary():
     seven_days_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
     rows = ""
-    print(f"Scanning filings since {seven_days_ago}...")
+    print("--- STARTING WEEKLY SCAN ---")
+    print(f"Looking for filings since {seven_days_ago}...")
     
     for ticker, cik in TICKERS.items():
         try:
@@ -58,10 +62,11 @@ def weekly_summary():
     
     # 💓 HEARTBEAT: If no news, create a "No News" row so the email still sends
     if not rows:
-        print("No news found. Sending Heartbeat email.")
+        print("No filings found this week. Sending heartbeat email...")
         rows = "<tr><td colspan='4' style='text-align:center; padding: 20px;'>No major filings detected in the last 7 days.</td></tr>"
         
-    html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table></body></html>"
+    html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table><p style='color: gray; font-size: 12px;'>System Status: Active and monitoring Pacifica watchlist.</p></body></html>"
+    
     send_mail(f"📊 Weekly Recap: {datetime.now().strftime('%b %d')}", html, is_html=True)
     print("SUCCESS: Weekly summary email sent.")
 
