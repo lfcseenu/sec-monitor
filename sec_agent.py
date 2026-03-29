@@ -1,69 +1,64 @@
-import requests, smtplib, os, json
+import requests, smtplib, os, json, sys
+from datetime import datetime, timedelta
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-# Your 2026 Biotech Watchlist
+# ==========================================
+# 🎯 THE MASTER WATCHLIST (Update Here Only)
+# ==========================================
 TICKERS = {
-    "MSLE": "0001840425", "FDMT": "0001406796", "CORT": "0001088825",
-    "SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527"
+    "MSLE": "0001421642", "DTIL": "0001357874", "FDMT": "0001650648", 
+    "CORT": "0001088856", "SGMO": "0001001233", "NTLA": "0001652130", 
+    "QURE": "0001590560", "ADVM": "0001381434"
 }
+
 EMAIL_TO = "lfcseenu@gmail.com"
 GMAIL_USER = "lfcseenu@gmail.com"
-GMAIL_PASS = os.environ.get('GMAIL_PASSWORD') 
-HEADERS = {'User-Agent': 'Pacifica Research Agent lfcseenu@gmail.com'}
+GMAIL_PASS = os.environ.get('GMAIL_PASSWORD')
+HEADERS = {'User-Agent': 'Pacifica Investment Agent lfcseenu@gmail.com'}
+CVR_NOTE = "Note: Adverum CVR milestones: $1.78 / $7.13 | FDMT Durability Watch"
 
-def monitor():
-    # 1. Load memory: check what we've seen in the past
-    if os.path.exists('last_seen.json'):
-        with open('last_seen.json', 'r') as f:
-            last_seen = json.load(f)
-    else:
-        last_seen = {}
+def send_mail(subject, body, is_html=False):
+    msg = MIMEMultipart('alternative') if is_html else MIMEText(body)
+    if is_html: msg.attach(MIMEText(body, 'html'))
+    msg['Subject'], msg['From'], msg['To'] = subject, GMAIL_USER, EMAIL_TO
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+        s.login(GMAIL_USER, GMAIL_PASS)
+        s.send_message(msg)
 
-    print("Checking SEC for updates...")
-
+def daily_monitor():
+    last_seen = json.load(open('last_seen.json')) if os.path.exists('last_seen.json') else {}
     for ticker, cik in TICKERS.items():
-        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
         try:
-            r = requests.get(url, headers=HEADERS, timeout=10)
+            r = requests.get(f"https://data.sec.gov/submissions/CIK{cik}.json", headers=HEADERS, timeout=10)
             if r.status_code == 200:
-                recent = r.json()['filings']['recent']
-                form, date, acc = recent['form'][0], recent['filingDate'][0], recent['accessionNumber'][0]
-                
-                # If this filing is NEW and NOT a noisy 'Form 4'
+                f = r.json()['filings']['recent']
+                form, date, acc = f['form'][0], f['filingDate'][0], f['accessionNumber'][0]
                 if last_seen.get(ticker) != acc:
-                    # Filter for substantive filings only
                     if form != "4" and any(x in form for x in ["8-K", "10-Q", "10-K", "13D", "13G", "13F"]):
-                        print(f"!!! New filing found for {ticker}: {form}")
-                        send_mail(ticker, form, date, cik, acc)
-                    
-                    # Update our memory variable
+                        link = f"https://www.sec.gov/cgi-bin/viewer.cgi?action=view&cik={cik}&accession_number={acc}"
+                        send_mail(f"🚨 SEC: {ticker} - {form}", f"New filing for {ticker}\nForm: {form}\nDate: {date}\n\nLink: {link}\n\n{CVR_NOTE}")
                     last_seen[ticker] = acc
-            else:
-                print(f"SEC limit or error for {ticker}: {r.status_code}")
-        except Exception as e:
-            print(f"Skipping {ticker} due to connection error: {e}")
+        except Exception: pass
+    with open('last_seen.json', 'w') as f: json.dump(last_seen, f)
 
-    # 2. ALWAYS save the file at the end so the GitHub Action "Save Memory" step succeeds
-    with open('last_seen.json', 'w') as f:
-        json.dump(last_seen, f)
-    print("Monitor cycle complete.")
-
-def send_mail(ticker, form, date, cik, acc):
-    # Professional SEC Viewer link for easy reading on your phone
-    xbrl_url = f"https://www.sec.gov/cgi-bin/viewer.cgi?action=view&cik={cik}&accession_number={acc}"
-    
-    body = f"Alert for {ticker}\nForm: {form}\nDate: {date}\n\nMobile Link: {xbrl_url}\n\nNote: Adverum CVR milestones: $1.78 / $7.13"
-    msg = MIMEText(body)
-    msg['Subject'] = f"🚨 SEC: {ticker} - {form}"
-    msg['From'], msg['To'] = GMAIL_USER, EMAIL_TO
-    
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
-            s.login(GMAIL_USER, GMAIL_PASS)
-            s.send_message(msg)
-        print(f"Email sent for {ticker}")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+def weekly_summary():
+    seven_days_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+    rows = ""
+    for ticker, cik in TICKERS.items():
+        try:
+            r = requests.get(f"https://data.sec.gov/submissions/CIK{cik}.json", headers=HEADERS, timeout=10)
+            if r.status_code == 200:
+                f = r.json()['filings']['recent']
+                for i in range(min(5, len(f['filingDate']))):
+                    if f['filingDate'][i] >= seven_days_ago:
+                        link = f"https://www.sec.gov/cgi-bin/viewer.cgi?action=view&cik={cik}&accession_number={f['accessionNumber'][i]}"
+                        rows += f"<tr><td>{ticker}</td><td>{f['form'][i]}</td><td>{f['filingDate'][i]}</td><td><a href='{link}'>View</a></td></tr>"
+        except Exception: continue
+    if rows:
+        html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='5' style='border-collapse: collapse;'><tr><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr>{rows}</table><p>{CVR_NOTE}</p></body></html>"
+        send_mail(f"📊 Weekly Recap: {datetime.now().strftime('%b %d')}", html, is_html=True)
 
 if __name__ == "__main__":
-    monitor()
+    if "--weekly" in sys.argv: weekly_summary()
+    else: daily_monitor()
