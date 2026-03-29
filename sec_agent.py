@@ -13,9 +13,10 @@ def weekly_summary():
                         rows += f"<tr><td>{ticker}</td><td>{f['form'][i]}</td><td>{f['filingDate'][i]}</td><td><a href='{link}'>View</a></td></tr>"
         except Exception: continue
     
+    # This part forces an email even if no filings were found
     if not rows:
         rows = "<tr><td colspan='4' style='text-align:center; padding: 20px;'>No major filings detected in the last 7 days.</td></tr>"
         
-    html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table><p style='color: gray; font-size: 12px;'>System Status: Active and monitoring Pacifica watchlist.</p></body></html>"
+    html = f"<html><body><h2>Weekly SEC Summary</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table><p>System Status: Active.</p></body></html>"
     send_mail(f"📊 Weekly Recap: {datetime.now().strftime('%b %d')}", html, is_html=True)
-    print("Weekly summary email sent successfully.")
+    print("Weekly summary email sent successfully.") # This line will appear in your logs
