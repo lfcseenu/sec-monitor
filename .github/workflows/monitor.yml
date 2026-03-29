@@ -1,0 +1,29 @@
+name: SEC Agent Schedule
+on:
+  schedule:
+    # Runs at 7am, 10am, 1pm, and 4pm Pacific Time (Mon-Fri)
+    # (GitHub uses UTC time, so we've shifted the hours for you)
+    - cron: '0 14,17,20,23 * * 1-5' 
+  workflow_dispatch: # This adds a "Run Manually" button for testing
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allows the agent to 'remember' what it saw
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Run SEC Script
+        env: { GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }} }
+        run: |
+          pip install requests
+          python sec_agent.py
+      - name: Save Memory
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add last_seen.json || echo "No changes"
+          git commit -m "Update memory" || echo "No changes"
+          git push || echo "No changes"
