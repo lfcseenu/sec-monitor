@@ -1,9 +1,9 @@
-name: Weekly Summary Agent
+name: Twice Daily Summary Agent
 on:
   schedule:
-    # Runs at 9:00 AM Pacific Time every Saturday
-    - cron: '0 16 * * 6' 
-  workflow_dispatch: # Allows you to run it manually for testing
+    - cron: '0 16 * * *'
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 jobs:
   run-summary:
     runs-on: ubuntu-latest
@@ -18,4 +18,4 @@ jobs:
           GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
         run: |
           pip install requests
-          python sec_agent.py --weekly
+          python sec_agent.py --summary
