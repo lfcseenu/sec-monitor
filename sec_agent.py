@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 TICKERS = {
-    "MSLE": "0001840425", "FDMT": "0001406796", "CORT": "0001088825",
+    "MSLE": "0001421642", "FDMT": "0001406796", "CORT": "0001088825",
     "SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527"
 }
 EMAIL_TO = "lfcseenu@gmail.com"
