@@ -1,15 +1,25 @@
 import requests, smtplib, os, json, sys
+
 from datetime import datetime, timedelta
+
 from email.mime.text import MIMEText
+
 from email.mime.multipart import MIMEMultipart
 
 TICKERS = {
-    "MSLE": "0001421642", "FDMT": "0001406796", "CORT": "0001088825",
-    "SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527"
+
+"MSLE": "0001421642", "FDMT": "0001406796", "CORT": "0001088825",
+
+"SGMO": "0001001233", "NTLA": "0001654531", "QURE": "0001537527"
+
 }
+
 EMAIL_TO = "lfcseenu@gmail.com"
+
 GMAIL_USER = "lfcseenu@gmail.com"
+
 GMAIL_PASS = os.environ.get('GMAIL_PASSWORD')
+
 HEADERS = {'User-Agent': 'Pacifica Research Agent lfcseenu@gmail.com'}
 
 def make_edgar_link(cik, acc):
@@ -62,9 +72,11 @@ def summary(hours=13):
                         rows += f"<tr><td>{ticker}</td><td>{f['form'][i]}</td><td>{f['filingDate'][i]}</td><td><a href='{link}'>View</a></td></tr>"
         except Exception:
             continue
+
     if not rows:
-        print("No new filings found. Sending heartbeat email...")
-        rows = "<tr><td colspan='4' style='text-align:center; padding: 20px;'>No major filings detected in this period.</td></tr>"
+        print("No new filings found. Skipping email.")
+        return
+
     html = f"<html><body><h2>SEC Filing Update</h2><table border='1' cellpadding='8' style='border-collapse: collapse; width: 100%;'><thead><tr style='background-color: #f2f2f2;'><th>Ticker</th><th>Form</th><th>Date</th><th>Link</th></tr></thead><tbody>{rows}</tbody></table></body></html>"
     send_mail(f"SEC Update: {datetime.now().strftime('%b %d %I:%M %p')}", html, is_html=True)
     print("SUCCESS: Summary email sent.")
